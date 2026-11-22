@@ -1,0 +1,11 @@
+services:
+    node-app:
+      build: .
+      image: alison-sales-tracker:1.0
+      container_name: alison-sales-tracker
+      ports:
+        - "3249:3249"
+      env_file: ".env"
+      environment:
+        - NODE_ENV=production
+
