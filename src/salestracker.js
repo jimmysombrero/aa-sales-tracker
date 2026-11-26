@@ -1,10 +1,10 @@
 import dotenv from 'dotenv';
-import fs from 'node:fs/promises';
+import {DataHandler} from './datahandler.js'
 
 dotenv.config({ quiet: true });
 
 export const ITEMS = ["fireball", "transfusion", "waterhazard", "jelloshot", "all"];
-const FILEPATH = '/usr/src/app/sales';
+const FILEPATH = '/mnt/data/sales';
 
 // SALES_TEMPLATE placeholders: {fireball} {transfusion} {waterhazard}
 const TWITCH_SALES_TEMPLATE =
@@ -15,41 +15,17 @@ const YT_SALES_TEMPLATE =
 
 class SalesTracker {
     constructor() {
-        this.counts = new Map();
         this.product;
         this.amount;
         this.platform;
+        this.dataHandler = new DataHandler(FILEPATH, ITEMS);
+        this.timeOutObject = undefined;
+        this.counts = undefined;
+        this.loadData();
     }
 
-    async load() {
-        let counts = { fireball: 0, transfusion: 0, waterhazard: 0, jelloshot: 0 };
-        //retrieve counts from storage
-        try {
-            await fs.access(FILEPATH, fs.constants.F_OK);
-
-            const data = await fs.readFile(FILEPATH, { encoding: 'utf-8' });
-            const stored = JSON.parse(data);
-
-            for (const item of ITEMS) {
-                const n = stored?.[item];
-                if (typeof n === "number" && Number.isFinite(n)) counts[item] = n;
-            }
-
-            return counts;
-        } catch (error) {
-            console.log(error);
-
-            return counts;
-        }
-    }
-
-    async save(data) {
-        try {
-            const jsonString = JSON.stringify(data, null, 2);
-            await fs.writeFile(FILEPATH, jsonString, { flag: 'w+', encoding: 'utf8' });
-        } catch (error) {
-            console.log("Couldn't save data.");
-        }
+    async loadData() {
+        this.counts = await this.dataHandler.load();
     }
 
     getSalesTemplate(platform) {
@@ -90,55 +66,49 @@ class SalesTracker {
     }
 
     async add(salesData) {
-        const counts = await this.load();
         const product = salesData.product;
         const amount = salesData.amount;
 
-        counts[product] = counts[product] + amount;
-        await this.save(counts);
+        this.counts[product] = this.counts[product] + amount || amount;
+        
+        this.dataHandler.saveData(this.counts);
 
-        return counts[product];
+        return this.counts[product];
     }
 
     async remove(salesData) {
-        const counts = await this.load();
         const product = salesData.product;
         const amount = salesData.amount;
 
         //don't go below zero when removing an item
-        counts[product] = Math.max(0, counts[product] - amount);
-        await this.save(counts);
+        this.counts[product] = Math.max(0, this.counts[product] - amount);
+        this.dataHandler.saveData(this.counts);
 
-        return counts[product];
+        return this.counts[product];
     }
 
     async setSales(salesData) {
-        const counts = await this.load();
         const product = salesData.product;
         const amount = salesData.amount;
 
-        counts[product] = Math.max(0, amount);
-        await this.save(counts);
+        this.counts[product] = Math.max(0, amount);
+        this.dataHandler.saveData(this.counts);
 
-        return counts[product];
+        return this.counts[product];
     }
 
     async getTotalSalesCount() {
-        const sales = await this.load();
-    
-        return sales;
+        return this.counts;
     }
 
     async getProductSalesCount(product) {
-        const sales = await this.load();
-
-        return sales[product];
+        return this.counts[product] || 0;
     }
 
     async reset() {
         const sales = { fireball: 0, transfusion: 0, waterhazard: 0, jelloshot: 0 };
 
-        await this.save(sales);
+        this.dataHandler.saveData(sales);
 
         return sales;
     }
