@@ -11,6 +11,12 @@ const TIPWINNERTEMPLATE = "Twitch: {twitch} | YouTube: {youtube} | Golfers: {gol
 class TipWinner {
     constructor() {
         this.dataHandler = new DataHandler(FILEPATH, WINNERS);
+        this.winners = undefined;
+        this.loadData();
+    }
+
+    async loadData() {
+        this.winners = this.dataHandler.load();
     }
 
     getWinnerTemplate() {
@@ -18,40 +24,34 @@ class TipWinner {
     }
 
     async addWinner(winner) {
-        const winners = await this.dataHandler.load();
+        this.winners[winner] = this.winners[winner] + 1;
+        this.dataHandler.saveData(this.winners);
 
-        winners[winner] = winners[winner] + 1;
-        await this.dataHandler.save(winners);
-
-        return winners;
+        return this.winners;
     }
 
     async removeWinner(winner) {
-        const winners = await this.dataHandler.load();
+        this.winners[winner] = Math.max(0, this.winners[winner] -1);
+        this.dataHandler.saveData(this.winners);
 
-        winners[winner] = Math.max(0, winners[winner] -1);
-        await this.dataHandler.save(winners);
-
-        return winners;
+        return this.winners;
     }
 
-    async getWinners() {
-        return await this.dataHandler.load();
+    getWinners() {
+        return this.winners;
     }
 
     async resetWinners() {
         const winners = {twitch: 0, youtube: 0, golfers: 0};
 
-        await this.dataHandler.save(winners);
+        this.dataHandler.saveData(winners);
 
         return winners;
     }
 
     async resetWinner(winner) {
-        const winners = await this.dataHandler.load();
-
-        winners[winner] = 0;
-        await this.dataHandler.save(winners);
+        this.winners[winner] = 0;
+        await this.dataHandler.saveData(winners);
 
         return winners;
     }
