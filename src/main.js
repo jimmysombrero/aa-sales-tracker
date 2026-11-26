@@ -18,7 +18,10 @@
 import dotenv from 'dotenv';
 import express from 'express';
 import { SalesTracker, ITEMS } from './salestracker.js';
+import { TipWinner, WINNERS } from './tipwinner.js';
+
 const salesTracker = new SalesTracker();
+const tipWinner = new TipWinner();
 
 dotenv.config({ quiet: true });
 
@@ -29,11 +32,12 @@ const SECRET = `${process.env.SALES_UPDATER_KEY}`;
 const PLATFORMS = ["twitch", "youtube"];
 
 let salesData = { product: '', amount: 0, platform: 'twitch' };
+let winnerData = { winner: '' };
 
 function fill(template, values) {
   return template.replace(
     /\{(\w+)\}/g,
-    (m, name) => name in values ? String(values[name]) : m,
+    (m, name) => name in values ? String(values[name]) : String(0),
   );
 }
 
@@ -68,7 +72,22 @@ const parseSalesGetRequest = (req, res, next) => {
   }
 
   next();
-};
+}
+
+const parseTipsWinner = (req, res, next) => {
+  const key = req.query['key'];
+
+  if (SECRET !== key) {
+    return res.status(200).set("content-type:text/plain; charset=utf-8").send("Could not validate API key.");
+  }
+
+  winnerData.winner = req.query['winner'];
+  if(WINNERS.includes(winnerData.winner) === fales) {
+    return res.status(200).set("content-type:text/plain; charset=utf-8").send("Winner must be one of twitch | youtube | golfers.");
+  }
+
+  next();
+}
 
 async function main() {
   app.get("/", (req, res) => {
@@ -115,6 +134,18 @@ async function main() {
     }
 
     res.status(200).set("content-type:text/plain; charset=utf-8").send(response);
+  });
+
+  app.get("/api/addWinner", parseTipsWinner, async (req, res) => {
+    const winners = await tipWinner.addWinner(winnerData.winner);
+
+    res.status(200).set("content-type:text/plain; charset=utf-8").send(fill(tipWinner.getWinnerTemplate(), winners));
+  });
+
+  app.get("/api/removeWinner", parseTipsWinner, async (req, res) => {
+    const winners = await tipWinner.removeWinner(winnerData.winner);
+
+    res.status(200).set("content-type:text/plain; charset=utf-8").send(fill(tipWinner.getWinnerTemplate(), winners));
   });
 
   app.listen(port, () => {
