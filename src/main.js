@@ -154,13 +154,13 @@ async function main() {
     res.status(200).set("content-type:text/plain; charset=utf-8").send(fill(tipWinner.getWinnerTemplate(), winners));
   });
 
-  res.get("api/resetWinner", parseTipsWinner, async (req, res) => {
+  app.get("api/resetWinner", parseTipsWinner, async (req, res) => {
     const winners = tipWinner.resetWinner(winnerData.winner);
 
     res.status(200).set("content-type:text/plain; charset=utf-8").send(fill(tipWinner.getWinnerTemplate(), winners));
   });
 
-  res.get("api/resetWinners", parseTipsWinner, async (req, res) => {
+  app.get("api/resetWinners", parseTipsWinner, async (req, res) => {
     const winners = tipWinner.resetWinners();
 
     res.status(200).set("content-type:text/plain; charset=utf-8").send(fill(tipWinner.getWinnerTemplate(), winners));
