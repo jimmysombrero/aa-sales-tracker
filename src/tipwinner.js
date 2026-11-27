@@ -16,21 +16,21 @@ class TipWinner {
     }
 
     async loadData() {
-        this.winners = this.dataHandler.load();
+        this.winners = await this.dataHandler.load();
     }
 
     getWinnerTemplate() {
         return TIPWINNERTEMPLATE;
     }
 
-    async addWinner(winner) {
-        this.winners[winner] = this.winners[winner] + 1;
+    addWinner(winner) {
+        this.winners[winner] = this.winners[winner] + 1 || 1;
         this.dataHandler.saveData(this.winners);
 
         return this.winners;
     }
 
-    async removeWinner(winner) {
+    removeWinner(winner) {
         this.winners[winner] = Math.max(0, this.winners[winner] -1);
         this.dataHandler.saveData(this.winners);
 
@@ -41,17 +41,18 @@ class TipWinner {
         return this.winners;
     }
 
-    async resetWinners() {
+    resetWinners() {
         const winners = {twitch: 0, youtube: 0, golfers: 0};
+        this.winners = winners;
 
         this.dataHandler.saveData(winners);
 
         return winners;
     }
 
-    async resetWinner(winner) {
+    resetWinner(winner) {
         this.winners[winner] = 0;
-        await this.dataHandler.saveData(winners);
+        this.dataHandler.saveData(winners);
 
         return winners;
     }
