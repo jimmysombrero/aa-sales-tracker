@@ -82,7 +82,7 @@ const parseTipsWinner = (req, res, next) => {
   }
 
   winnerData.winner = req.query['winner'];
-  if(WINNERS.includes(winnerData.winner) === fales) {
+  if(WINNERS.includes(winnerData.winner) === false) {
     return res.status(200).set("content-type:text/plain; charset=utf-8").send("Winner must be one of twitch | youtube | golfers.");
   }
 
@@ -144,6 +144,24 @@ async function main() {
 
   app.get("/api/removeWinner", parseTipsWinner, async (req, res) => {
     const winners = await tipWinner.removeWinner(winnerData.winner);
+
+    res.status(200).set("content-type:text/plain; charset=utf-8").send(fill(tipWinner.getWinnerTemplate(), winners));
+  });
+
+  app.get("/api/winners", parseTipsWinner, async (req, res) => {
+    const winners = tipWinner.getWinners();
+
+    res.status(200).set("content-type:text/plain; charset=utf-8").send(fill(tipWinner.getWinnerTemplate(), winners));
+  });
+
+  res.get("api/resetWinner", parseTipsWinner, async(req, res) => {
+    const winners = tipWinner.resetWinner(winnerData.winner);
+
+    res.status(200).set("content-type:text/plain; charset=utf-8").send(fill(tipWinner.getWinnerTemplate(), winners));
+  });
+
+  res.get("api/resetWinners", parseTipsWinner, async (req, res) => {
+    const winners = tipWinner.resetWinners();
 
     res.status(200).set("content-type:text/plain; charset=utf-8").send(fill(tipWinner.getWinnerTemplate(), winners));
   });
