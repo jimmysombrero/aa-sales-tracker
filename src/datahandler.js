@@ -4,7 +4,6 @@ class DataHandler {
     constructor(filePath, items) {
         this.filePath = filePath;
         this.items = items;
-        console.log(this.items);
         this.timeout = undefined;
         this.clearTimeout = false;
     }
