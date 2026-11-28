@@ -26,7 +26,7 @@ const tipWinner = new TipWinner();
 dotenv.config({ quiet: true });
 
 const app = express();
-const router = express.Router();
+const apiRouter = express.Router();
 const port = 3249;
 
 const SECRET = `${process.env.SALES_UPDATER_KEY}`;
@@ -66,8 +66,8 @@ const parseSalesGetRequest = (req, res, next) => {
   //make sure amount is an integer less than or equal to 100
   //hopefully we don't sell more than 100 drinks at a time
   if ((bypassChecks === false && something === undefined) || 
-      (something !== undefined && (Number.isInteger(salesData.amount) === false || salesData.amount < 0 || salesData.amount > 100))) {
-    return res.status(200).set("content-type:text/plain; charset=utf-8").send("Amount must be an integer greater than 0.");
+      (something !== undefined && (Number.isInteger(salesData.amount) === false || salesData.amount > 100))) {
+    return res.status(200).set("content-type:text/plain; charset=utf-8").send("Amount must be an integer.");
   }
 
   salesData.platform = req.query['app'];
@@ -105,34 +105,34 @@ async function main() {
     console.log(`Sales tracker listening on port ${port}`);
   });
 
-  app.use("/api", router);
+  app.use("/api", apiRouter);
 
-  router.get("/add", parseSalesGetRequest, async (req, res) => {
+  apiRouter.get("/add", parseSalesGetRequest, async (req, res) => {
     const amountSold = await salesTracker.add(salesData);
 
     res.status(200).set("content-type:text/plain; charset=utf-8").send(salesTracker.getReply(salesData.platform, salesData.product, amountSold));
   });
 
-  router.get("/remove", parseSalesGetRequest, async (req, res) => {
+  apiRouter.get("/remove", parseSalesGetRequest, async (req, res) => {
     const amountSold = await salesTracker.remove(salesData);
 
     res.status(200).set("content-type:text/plain; charset=utf-8").send(salesTracker.getReply(salesData.platform, salesData.product, amountSold));
   });
 
-  router.get("/resetSales", parseSalesGetRequest, async (req, res) => {
+  apiRouter.get("/resetSales", parseSalesGetRequest, async (req, res) => {
     const data = await salesTracker.reset();
     const salesTemplate = salesTracker.getSalesTemplate(salesData.platform);
 
     res.status(200).set("content-type:text/plain; charset=utf-8").send(fill(salesTemplate, data));
   });
 
-  router.get("/setSales", parseSalesGetRequest, async (req, res) => {
+  apiRouter.get("/setSales", parseSalesGetRequest, async (req, res) => {
     const amountSold = await salesTracker.setSales(salesData);
 
     res.status(200).set("content-type:text/plain; charset=utf-8").send(salesTracker.getReply(salesData.platform, salesData.product, amountSold));
   });
 
-  router.get("/sales", parseSalesGetRequest, async (req, res) => {
+  apiRouter.get("/sales", parseSalesGetRequest, async (req, res) => {
     let response;
     let salesTemplate = salesTracker.getSalesTemplate(salesData.platform);
     let soldAmount;
@@ -149,31 +149,31 @@ async function main() {
     res.status(200).set("content-type:text/plain; charset=utf-8").send(response);
   });
 
-  router.get("/addWinner", parseTipsWinner, async (req, res) => {
+  apiRouter.get("/addWinner", parseTipsWinner, async (req, res) => {
     const winners = await tipWinner.addWinner(winnerData.winner);
 
     res.status(200).set("content-type:text/plain; charset=utf-8").send(fill(tipWinner.getWinnerTemplate(), winners));
   });
 
-  router.get("/removeWinner", parseTipsWinner, async (req, res) => {
+  apiRouter.get("/removeWinner", parseTipsWinner, async (req, res) => {
     const winners = await tipWinner.removeWinner(winnerData.winner);
 
     res.status(200).set("content-type:text/plain; charset=utf-8").send(fill(tipWinner.getWinnerTemplate(), winners));
   });
 
-  router.get("/winners", parseTipsWinner, async (req, res) => {
+  apiRouter.get("/winners", parseTipsWinner, async (req, res) => {
     const winners = tipWinner.getWinners();
 
     res.status(200).set("content-type:text/plain; charset=utf-8").send(fill(tipWinner.getWinnerTemplate(), winners));
   });
 
-  router.get("/resetWinner", parseTipsWinner, async (req, res) => {
+  apiRouter.get("/resetWinner", parseTipsWinner, async (req, res) => {
     const winners = tipWinner.resetWinner(winnerData.winner);
 
     res.status(200).set("content-type:text/plain; charset=utf-8").send(fill(tipWinner.getWinnerTemplate(), winners));
   });
 
-  router.get("/resetWinners", parseTipsWinner, async (req, res) => {
+  apiRouter.get("/resetWinners", parseTipsWinner, async (req, res) => {
     const winners = tipWinner.resetWinners();
 
     res.status(200).set("content-type:text/plain; charset=utf-8").send(fill(tipWinner.getWinnerTemplate(), winners));
