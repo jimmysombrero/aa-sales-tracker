@@ -107,7 +107,7 @@ class SalesTracker {
 
     async reset() {
         const sales = { fireball: 0, transfusion: 0, waterhazard: 0, jelloshot: 0 };
-
+        this.counts = sales;
         this.dataHandler.saveData(sales);
 
         return sales;
