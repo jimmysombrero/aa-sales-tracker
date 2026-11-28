@@ -26,6 +26,7 @@ const tipWinner = new TipWinner();
 dotenv.config({ quiet: true });
 
 const app = express();
+const router = express.Router();
 const port = 3249;
 
 const SECRET = `${process.env.SALES_UPDATER_KEY}`;
@@ -51,18 +52,21 @@ const parseSalesGetRequest = (req, res, next) => {
     return res.status(200).set("content-type:text/plain; charset=utf-8").send("Could not validate API key.");
   }
 
-  salesData.product = req.query['item'] || "all";
+  salesData.product = req.query['item'];
+  const bypassChecks = (req.path === "/sales" || req.path === "/resetSales");
 
   //make sure the product is in the items array
-  if (ITEMS.includes(salesData.product) === false) {
-    return res.status(200).set("content-type:text/plain; charset=utf-8").send("Item must be one of fireball | transfusion | waterhazard | all");
+  if ((bypassChecks === false && salesData.product === undefined) || 
+      (salesData.product !== undefined && ITEMS.includes(salesData.product) === false)) {
+    return res.status(200).set("content-type:text/plain; charset=utf-8").send("Item must be one of fireball | transfusion | waterhazard");
   }
 
-  salesData.amount = Number(req.query['amount']);
-
+  const something = req.query['amount'];
+  salesData.amount = Number(something);
   //make sure amount is an integer less than or equal to 100
   //hopefully we don't sell more than 100 drinks at a time
-  if (Number.isInteger(salesData.amount) === false || salesData.amount < 0 || salesData.amount > 100) {
+  if ((bypassChecks === false && something === undefined) || 
+      (something !== undefined && (Number.isInteger(salesData.amount) === false || salesData.amount < 0 || salesData.amount > 100))) {
     return res.status(200).set("content-type:text/plain; charset=utf-8").send("Amount must be an integer greater than 0.");
   }
 
@@ -82,7 +86,10 @@ const parseTipsWinner = (req, res, next) => {
   }
 
   winnerData.winner = req.query['winner'];
-  if(WINNERS.includes(winnerData.winner) === false) {
+
+  const bypassChecks = (req.path === "/resetWinners" || req.path === "/winners") && winnerData.winner === undefined;
+
+  if (bypassChecks === false && WINNERS.includes(winnerData.winner) === false) {
     return res.status(200).set("content-type:text/plain; charset=utf-8").send("Winner must be one of twitch | youtube | golfers.");
   }
 
@@ -94,38 +101,44 @@ async function main() {
     res.send("Nothing to see here!")
   });
 
-  app.get("/api/add", parseSalesGetRequest, async (req, res) => {
+  app.listen(port, () => {
+    console.log(`Sales tracker listening on port ${port}`);
+  });
+
+  app.use("/api", router);
+
+  router.get("/add", parseSalesGetRequest, async (req, res) => {
     const amountSold = await salesTracker.add(salesData);
 
     res.status(200).set("content-type:text/plain; charset=utf-8").send(salesTracker.getReply(salesData.platform, salesData.product, amountSold));
   });
 
-  app.get("/api/remove", parseSalesGetRequest, async (req, res) => {
+  router.get("/remove", parseSalesGetRequest, async (req, res) => {
     const amountSold = await salesTracker.remove(salesData);
 
     res.status(200).set("content-type:text/plain; charset=utf-8").send(salesTracker.getReply(salesData.platform, salesData.product, amountSold));
   });
 
-  app.get("/api/resetSales", parseSalesGetRequest, async (req, res) => {
+  router.get("/resetSales", parseSalesGetRequest, async (req, res) => {
     const data = await salesTracker.reset();
     const salesTemplate = salesTracker.getSalesTemplate(salesData.platform);
 
     res.status(200).set("content-type:text/plain; charset=utf-8").send(fill(salesTemplate, data));
   });
 
-  app.get("/api/setSales", parseSalesGetRequest, async (req, res) => {
+  router.get("/setSales", parseSalesGetRequest, async (req, res) => {
     const amountSold = await salesTracker.setSales(salesData);
 
     res.status(200).set("content-type:text/plain; charset=utf-8").send(salesTracker.getReply(salesData.platform, salesData.product, amountSold));
   });
 
-  app.get("/api/sales", parseSalesGetRequest, async (req, res) => {
+  router.get("/sales", parseSalesGetRequest, async (req, res) => {
     let response;
     let salesTemplate = salesTracker.getSalesTemplate(salesData.platform);
     let soldAmount;
     let product = salesData.product;
 
-    if (product === "all") {
+    if (product === undefined) {
       soldAmount = await salesTracker.getTotalSalesCount();
       response = fill(salesTemplate, soldAmount);
     } else {
@@ -136,38 +149,34 @@ async function main() {
     res.status(200).set("content-type:text/plain; charset=utf-8").send(response);
   });
 
-  app.get("/api/addWinner", parseTipsWinner, async (req, res) => {
+  router.get("/addWinner", parseTipsWinner, async (req, res) => {
     const winners = await tipWinner.addWinner(winnerData.winner);
 
     res.status(200).set("content-type:text/plain; charset=utf-8").send(fill(tipWinner.getWinnerTemplate(), winners));
   });
 
-  app.get("/api/removeWinner", parseTipsWinner, async (req, res) => {
+  router.get("/removeWinner", parseTipsWinner, async (req, res) => {
     const winners = await tipWinner.removeWinner(winnerData.winner);
 
     res.status(200).set("content-type:text/plain; charset=utf-8").send(fill(tipWinner.getWinnerTemplate(), winners));
   });
 
-  app.get("/api/winners", parseTipsWinner, async (req, res) => {
+  router.get("/winners", parseTipsWinner, async (req, res) => {
     const winners = tipWinner.getWinners();
 
     res.status(200).set("content-type:text/plain; charset=utf-8").send(fill(tipWinner.getWinnerTemplate(), winners));
   });
 
-  app.get("api/resetWinner", parseTipsWinner, async (req, res) => {
+  router.get("/resetWinner", parseTipsWinner, async (req, res) => {
     const winners = tipWinner.resetWinner(winnerData.winner);
 
     res.status(200).set("content-type:text/plain; charset=utf-8").send(fill(tipWinner.getWinnerTemplate(), winners));
   });
 
-  app.get("api/resetWinners", parseTipsWinner, async (req, res) => {
+  router.get("/resetWinners", parseTipsWinner, async (req, res) => {
     const winners = tipWinner.resetWinners();
 
     res.status(200).set("content-type:text/plain; charset=utf-8").send(fill(tipWinner.getWinnerTemplate(), winners));
-  });
-
-  app.listen(port, () => {
-    console.log(`Sales tracker listening on port ${port}`);
   });
 }
 
